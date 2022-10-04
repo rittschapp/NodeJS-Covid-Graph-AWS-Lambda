@@ -2,7 +2,7 @@
 
 # covid19
 
-A simple Node.JS application to demononstrate how to use AWS lambda functions.
+A simple Node.JS application to demonstrate how to use AWS lambda functions.
 
 This function will download a large data file on each invocation and generate a
 graph of the number of positive COVID-19 case counts in BC since the start of
@@ -24,13 +24,14 @@ An installed instance of this function can be called via AWS Labmda at:
 
 https://ycqzewcijzia2y6b22r7jihlca0qojcq.lambda-url.us-east-1.on.aws/
 
-*Please Note*:
+*Please Note*: The current implementation takes up to 30 seconds or more to
+download the data and process the chart.
 
 
 ## Developing: Next Steps
 
- * Deploy using AWS CLI
+ * Deploy changes using AWS CLI
  * Code cleanup
- * Caching datafile so it does not need to be downloaded every time
+ * Caching datafile so it doesn't need to download every time (takes too long)
  * Caching image so it does not need to be generated every time
 
