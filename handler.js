@@ -18,13 +18,13 @@ module.exports.hello = async function(event, context) {
 	let imageData =  await processReportDataToImage(rawReportCSV);
 
 	return {
-	    statusCode: 200,
-	    headers: {
-	    	"content-type": "image/png"
-	    },
-	    body: imageData,
-	    isBase64Encoded: true
-	  };
+		statusCode: 200,
+		headers: {
+			"content-type": "image/png"
+		},
+		body: imageData,
+		isBase64Encoded: true
+	};
 };
 
 
