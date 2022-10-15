@@ -12,7 +12,7 @@ module.exports.hello = async function(event, context) {
 	imageReady = false;
 
 	// Download raw report data from the Gov URL
-	let rawReportCSV = await getLatestReport();		
+	let rawReportCSV = await getLatestReport();
 
 	// Strip, transform, and process the text into an image.
 	let imageData =  await processReportDataToImage(rawReportCSV);

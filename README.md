@@ -3,7 +3,7 @@
 # covid19
 
 A simple Node.JS AWS lambda function to generate a graph of the total COVID-19
-case counts in BC since the start pf the pandemic. 
+case counts in BC since the start of the pandemic. 
 
 This function will download a large data file from the GOV website on each
 invocation and generate a graph of the number of positive COVID-19 lab-tested
