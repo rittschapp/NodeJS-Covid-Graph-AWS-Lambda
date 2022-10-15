@@ -34,6 +34,11 @@ https://ycqzewcijzia2y6b22r7jihlca0qojcq.lambda-url.us-east-1.on.aws/
 download the data and process the chart and may timeout.
 
 
+## Data Source
+
+http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv
+
+
 ## Future Improvements: Next Steps
 
  * Add to-from dates in Graph title
