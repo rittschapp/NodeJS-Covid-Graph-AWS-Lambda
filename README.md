@@ -21,7 +21,7 @@ method may vary. Deployment requires target AWS Lambda instance.
 Deployment also requires two environment variables for the plotly library.
 
  * PLOTLY_USER: Username for the plotly library
- * PLOTLY_TOKEN: ASPI token for the plotly library
+ * PLOTLY_TOKEN: API token for the plotly library
 
 Plotly username and API token are provided with a plotly account signup at 
 https://www.plotly.com/
