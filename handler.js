@@ -28,7 +28,7 @@ module.exports.hello = async function(event, context) {
 };
 
 
-/* Download the latest published report returning the raw file as text 
+/* Download the latest published report returning the raw file as text.
  */
 async function getLatestReport() {
 	let t = await fetch(url).then(content => content.text())
