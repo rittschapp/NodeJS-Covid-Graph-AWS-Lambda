@@ -41,6 +41,7 @@ http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Deta
 
 ## Future Improvements: Next Steps
 
+ * Handle waiting on graph without need of global variable (using 'promise')
  * Add to-from dates in Graph title
  * Auto-deploy changes on push to github
  * Caching datafile so it doesn't need to download every time (takes too long)

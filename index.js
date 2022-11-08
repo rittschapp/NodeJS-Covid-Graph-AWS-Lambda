@@ -1,14 +1,15 @@
 const url = "http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv";
 const fetch = require('node-fetch');
-const Stream = require('stream');
+const stream = require('stream');
 const plotly = require('plotly')(process.env.PLOTLY_USER, process.env.PLOTLY_TOKEN);
 const date = (new Date()).toISOString().split('T')[0];
+
+// Used to wait for image stream to complete.
+// Needs to be improved to use promise instead.
 let imageReady = false;
 
 
 exports.handler = async (event) => {
-
-	imageReady = false;
 
 	// Download raw report data from the Gov URL
 	let rawReportCSV = await getLatestReport();
@@ -82,7 +83,7 @@ async function processReportDataToImage(text) {
 
 	// an array of Buffer containing image data bytes 
 	const imageDataArr = [];
-	const writableStream = new Stream.Writable();
+	const writableStream = new stream.Writable();
 	writableStream._write = (chunk, encoding, next) => {
 		// Collect image data
 		imageDataArr.push(chunk);
