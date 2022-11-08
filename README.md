@@ -26,7 +26,7 @@ Deployment also requires two environment variables for the plotly library.
 Plotly username and API token are provided with a plotly account signup at 
 https://www.plotly.com/
 
-An installed instance of this function can be called via AWS Labmda at:
+An installed instance of this function can be called via AWS Lambda at:
 
 https://ycqzewcijzia2y6b22r7jihlca0qojcq.lambda-url.us-east-1.on.aws/
 

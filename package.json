@@ -1,0 +1,8 @@
+{
+	"requires": true,
+	"lockfileVersion": 1,
+	"dependencies": {
+		"node-fetch": "2.6.1",
+		"plotly":  "1.0.6"
+	}
+}

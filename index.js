@@ -1,13 +1,12 @@
-'use strict';
-
 const url = "http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv";
-const http = require("http");
-const fetch = require("node-fetch");
+const fetch = require('node-fetch');
 const Stream = require('stream');
-var plotly = require('plotly')(process.env.PLOTLY_USER, process.env.PLOTLY_TOKEN);
+const plotly = require('plotly')(process.env.PLOTLY_USER, process.env.PLOTLY_TOKEN);
+const date = (new Date()).toISOString().split('T')[0];
 let imageReady = false;
 
-module.exports.hello = async function(event, context) {
+
+exports.handler = async (event) => {
 
 	imageReady = false;
 
@@ -31,9 +30,10 @@ module.exports.hello = async function(event, context) {
 /* Download the latest published report returning the raw file as text.
  */
 async function getLatestReport() {
-	let t = await fetch(url).then(content => content.text())
-	.then(text => {return text;});
-	return t;	
+	return await fetch(url).then(content => content.text())
+		.then(text => {
+			return text;
+		});
 }
 
 
@@ -42,7 +42,7 @@ async function getLatestReport() {
  * a Buffer object. This will summate the positive covid cases by day.
   */
 async function processReportDataToImage(text) {
-			
+
 	// remove all the " padding around field values
 	text = text.replace(/\"/g,'');
 
@@ -54,9 +54,9 @@ async function processReportDataToImage(text) {
 	// the sum per day of newly reported cases
 	let covidData = new Map();	
 
-	dataLines.forEach(function(line, index) {				
+	dataLines.forEach(function(line) {
 		let entry = line.split(",");
-		if (entry[0] == '' ) {return;}
+		if (entry[0] === '' ) {return;}
 		if (!covidData.has(entry[0])) {
 			// Init entry for the given date
 			covidData.set(entry[0],0);
@@ -105,7 +105,8 @@ async function processReportDataToImage(text) {
 async function generateGraph(writableStream, x,y) {
 
 	// Init details for the line to be graphed 
-	var trace1 = {
+	// noinspection SpellCheckingInspection
+	const trace1 = {
 		'x' : x,
 		'y' : y,
 		'type' : 'scatter',
@@ -113,13 +114,13 @@ async function generateGraph(writableStream, x,y) {
 	};
 
 	// Additional options for lines and overall graph labels etc.
-	var figure = { 
+	const figure = {
 		'data': [trace1],
-		'layout' : {'title': 'Daily Positive Covid Tests in BC'}
+		'layout' : {'title': 'Daily Positive Covid Tests in BC - ' + date}
 	};
 
-	// Image ouput options.
-	var imgOpts = {
+	// Image output options.
+	const imgOpts = {
 		format: 'png',
 		width: 1000,
 		height: 500
