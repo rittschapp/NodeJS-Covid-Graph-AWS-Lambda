@@ -1,17 +1,20 @@
 const url = "http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv";
+const aws = require('@aws-sdk/client-s3');
 const fetch = require('node-fetch');
 const stream = require('stream');
 const plotly = require('plotly')(process.env.PLOTLY_USER, process.env.PLOTLY_TOKEN);
-const date = (new Date()).toISOString().split('T')[0];
+const today_date = (new Date()).toISOString().split('T')[0];
+let first_entry_date = "";
 
 // Used to wait for image stream to complete.
 // Needs to be improved to use promise instead.
+// to readme -> show a disclaimer or error if the latest image could not be produced
 let imageReady = false;
 
 
 exports.handler = async (event) => {
 
-	// Download raw report data from the Gov URL
+	// Get latest available raw report
 	let rawReportCSV = await getLatestReport();
 
 	// Strip, transform, and process the text into an image.
@@ -31,10 +34,21 @@ exports.handler = async (event) => {
 /* Download the latest published report returning the raw file as text.
  */
 async function getLatestReport() {
-	return await fetch(url).then(content => content.text())
+
+	// check if the latest report is available in S3 storage
+	// if it exists fetch it or its metadata and check report_date
+	// if timestamp is >= today_date return the report
+
+	// otherwise fetch the latest report
+	const csv_report = await fetch(url).then(content => content.text())
 		.then(text => {
 			return text;
 		});
+
+	// store the latest report in s3 bucket
+	// ...
+
+	return csv_report;
 }
 
 
@@ -61,6 +75,9 @@ async function processReportDataToImage(text) {
 		if (!covidData.has(entry[0])) {
 			// Init entry for the given date
 			covidData.set(entry[0],0);
+			if (!first_entry_date) {
+				first_entry_date = entry[0];
+			}
 		}
 		// Increment case count for the given date
 		covidData.set(entry[0], covidData.get(entry[0]) + 1);
@@ -69,9 +86,7 @@ async function processReportDataToImage(text) {
 	// Next is to build the graph
 	let x = [];
 	let y = [];
-	let entryKey = '';
 	covidData.forEach(function(value, key, map) {
-		entryKey = key;
 		x.push(key);
 		y.push(value);
 	});
@@ -115,9 +130,10 @@ async function generateGraph(writableStream, x,y) {
 	};
 
 	// Additional options for lines and overall graph labels etc.
+	const title = `Daily Positive Covid Tests in BC  [${first_entry_date}  to  ${today_date}]`;
 	const figure = {
 		'data': [trace1],
-		'layout' : {'title': 'Daily Positive Covid Tests in BC - ' + date}
+		'layout' : {'title': title}
 	};
 
 	// Image output options.

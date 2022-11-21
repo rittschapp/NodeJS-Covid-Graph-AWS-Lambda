@@ -1,8 +1,13 @@
 {
+	"name": "@rittschapp/covid-19",
+	"version": "1.0.0",
+	"author": "Philip Rittscher <philip@rittscher.com>",
+	"license": "unlicensed",
 	"requires": true,
 	"lockfileVersion": 1,
 	"dependencies": {
-		"node-fetch": "2.6.1",
-		"plotly":  "1.0.6"
+		"@aws-sdk/client-s3": "~3.213.0",
+		"node-fetch": "~2.6.7",
+		"plotly": "1.0.6"
 	}
 }
