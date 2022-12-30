@@ -1,10 +1,12 @@
 const url = "http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv";
-const aws = require('@aws-sdk/client-s3');
+
 const fetch = require('node-fetch');
-const stream = require('stream');
+const Stream = require('stream');
+const SimpleBucket = require("./simplebucket.js");
 const plotly = require('plotly')(process.env.PLOTLY_USER, process.env.PLOTLY_TOKEN);
-const today_date = (new Date()).toISOString().split('T')[0];
+const todayDate = (new Date()).toISOString().split('T')[0];
 let first_entry_date = "";
+
 
 // Used to wait for image stream to complete.
 // Needs to be improved to use promise instead.
@@ -14,11 +16,30 @@ let imageReady = false;
 
 exports.handler = async (event) => {
 
-	// Get latest available raw report
-	let rawReportCSV = await getLatestReport();
 
-	// Strip, transform, and process the text into an image.
-	let imageData =  await processReportDataToImage(rawReportCSV);
+	// s3://rittschapp-covid-graph/covid-graph-image
+	let imgBucket = new SimpleBucket(
+		process.env.REGION,
+		process.env.BUCKET_NAME,
+		process.env.BUCKET_KEY
+	);
+
+	// try to get the current image from the storage bucket
+	let imageData = await imgBucket.getImage();
+
+	// if no image retrieved, then get the latest data,
+	// generate the graph and store it.
+	if(!imageData) {
+		// Get latest available raw report
+		let rawReportCSV = await getLatestReport();
+
+		// Strip, transform, and process the text into an image.
+		imageData =  await processReportDataToImage(rawReportCSV);
+		if (imageData) {
+			// store today's image in the bucket
+			await imgBucket.storeImage(imageData);
+		}
+	}
 
 	return {
 		statusCode: 200,
@@ -35,18 +56,11 @@ exports.handler = async (event) => {
  */
 async function getLatestReport() {
 
-	// check if the latest report is available in S3 storage
-	// if it exists fetch it or its metadata and check report_date
-	// if timestamp is >= today_date return the report
-
-	// otherwise fetch the latest report
+	// fetch the latest report
 	const csv_report = await fetch(url).then(content => content.text())
 		.then(text => {
 			return text;
 		});
-
-	// store the latest report in s3 bucket
-	// ...
 
 	return csv_report;
 }
@@ -98,7 +112,7 @@ async function processReportDataToImage(text) {
 
 	// an array of Buffer containing image data bytes 
 	const imageDataArr = [];
-	const writableStream = new stream.Writable();
+	const writableStream = new Stream.Writable();
 	writableStream._write = (chunk, encoding, next) => {
 		// Collect image data
 		imageDataArr.push(chunk);
@@ -130,7 +144,8 @@ async function generateGraph(writableStream, x,y) {
 	};
 
 	// Additional options for lines and overall graph labels etc.
-	const title = `Daily Positive Covid Tests in BC  [${first_entry_date}  to  ${today_date}]`;
+	const title = `Daily Positive Covid Tests in BC  [${first_entry_date}  to  ${todayDate}]`;
+
 	const figure = {
 		'data': [trace1],
 		'layout' : {'title': title}
