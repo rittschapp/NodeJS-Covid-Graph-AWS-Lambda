@@ -16,8 +16,6 @@ let imageReady = false;
 
 exports.handler = async (event) => {
 
-
-	// s3://rittschapp-covid-graph/covid-graph-image
 	let imgBucket = new SimpleBucket(
 		process.env.REGION,
 		process.env.BUCKET_NAME,

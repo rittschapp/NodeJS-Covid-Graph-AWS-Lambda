@@ -128,7 +128,6 @@ class SimpleBucket {
      Gets the image bucket or empty string if it does not exist
      */
     async #getImageBucket() {
-        console.log(this.#bucketParams);
         let getObjectResult = await this.#client.send(new GetObjectCommand(this.#bucketParams));
         return await getObjectResult;
     }
