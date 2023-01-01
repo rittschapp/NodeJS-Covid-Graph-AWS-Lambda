@@ -1,20 +1,18 @@
-const url = "http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv";
-
 const fetch = require('node-fetch');
 const Stream = require('stream');
-const SimpleBucket = require("./simplebucket.js");
 const plotly = require('plotly')(process.env.PLOTLY_USER, process.env.PLOTLY_TOKEN);
-const todayDate = (new Date()).toISOString().split('T')[0];
-let first_entry_date = "";
+const SimpleBucket = require("./simplebucket.js");
 
-
-// Used to wait for image stream to complete.
-// Needs to be improved to use promise instead.
-// to readme -> show a disclaimer or error if the latest image could not be produced
+// Global - flag used to sleep until plotly completes the image.
 let imageReady = false;
 
 
-exports.handler = async (event) => {
+/*
+ Main call of the lambda function to attempt to either retrieve the cached
+ image or generate it using data from the url. If the image is generated it
+ will be cached for up to 24 hours.
+ */
+exports.handler = async () => {
 
 	let imgBucket = new SimpleBucket(
 		process.env.REGION,
@@ -25,20 +23,26 @@ exports.handler = async (event) => {
 	// try to get the current image from the storage bucket
 	let imageData = await imgBucket.getImage();
 
-	// if no image retrieved, then get the latest data,
-	// generate the graph and store it.
+	// If needed, regenerate image from scratch. For next improvement
+	// the existing image from the bucket will be used if there is an error
+	// generating the new one.
 	if(!imageData) {
-		// Get latest available raw report
-		let rawReportCSV = await getLatestReport();
+
+		// Download this report as txt
+		const url = "http://www.bccdc.ca/Health-Info-Site/Documents/BCCDC_COVID19_Dashboard_Case_Details.csv";
+		const rawReportCSV = await getLatestReport(url);
 
 		// Strip, transform, and process the text into an image.
-		imageData =  await processReportDataToImage(rawReportCSV);
-		if (imageData) {
-			// store today's image in the bucket
+		const newImageData =  await processReportDataToImage(rawReportCSV);
+		if (newImageData) {
+			imageData = newImageData;
+			// store new image in the bucket
 			await imgBucket.storeImage(imageData);
 		}
 	}
 
+	// Improvement - show error in the case that imageData is completely
+	// unavailable
 	return {
 		statusCode: 200,
 		headers: {
@@ -50,23 +54,27 @@ exports.handler = async (event) => {
 };
 
 
-/* Download the latest published report returning the raw file as text.
+/*
+ Download the latest published report returning the raw file as text.
  */
-async function getLatestReport() {
+async function getLatestReport(url) {
 
 	// fetch the latest report
-	const csv_report = await fetch(url).then(content => content.text())
+	return await fetch(url)
+		.then(content => content.text())
 		.then(text => {
 			return text;
 		});
-
-	return csv_report;
 }
 
 
 /* Take raw report data (csv file) and transform it into x-y chart
  * and then call the generateGraph function to write a PNG image into
  * a Buffer object. This will summate the positive covid cases by day.
+ *
+ * Improvement - separate the txt processing and image generation to
+ * multiple functions: process txt, set graph display options, generate
+ * graph...
   */
 async function processReportDataToImage(text) {
 
@@ -87,28 +95,25 @@ async function processReportDataToImage(text) {
 		if (!covidData.has(entry[0])) {
 			// Init entry for the given date
 			covidData.set(entry[0],0);
-			if (!first_entry_date) {
-				first_entry_date = entry[0];
-			}
 		}
 		// Increment case count for the given date
 		covidData.set(entry[0], covidData.get(entry[0]) + 1);
 	});
 
-	// Next is to build the graph
+	// Set up graph data
 	let x = [];
 	let y = [];
-	covidData.forEach(function(value, key, map) {
+	covidData.forEach(function(value, key) {
 		x.push(key);
 		y.push(value);
 	});
 	
-	// remove the last entry from the dataset as the latest day
+	// Remove the last entry from the dataset as the latest day
 	// never has the full total  (published at 5:00 PM PT)
 	x.pop();
 	y.pop();
 
-	// an array of Buffer containing image data bytes 
+	// Array to collect image data streamed from plotly
 	const imageDataArr = [];
 	const writableStream = new Stream.Writable();
 	writableStream._write = (chunk, encoding, next) => {
@@ -119,11 +124,14 @@ async function processReportDataToImage(text) {
 	
 	// Call the plotly module to generate the graph image.
 	await generateGraph(writableStream, x, y);
+
+	// The Lambda function has a max runtime that should be configured
+	// to 30 seconds.
 	while(imageReady === false) {
 		await sleep(500);
 	}
 
-	// Return image data array as encoded string.
+	// Return image as encoded string.
 	return Buffer.concat(imageDataArr).toString('base64');
 }
 
@@ -132,18 +140,16 @@ async function processReportDataToImage(text) {
  */
 async function generateGraph(writableStream, x,y) {
 
-	// Init details for the line to be graphed 
-	// noinspection SpellCheckingInspection
+	// Set title and graph data
+	const firstEntryDate = new Date(x[0]).toISOString().split('T')[0];
+	const lastEntryDate = new Date(x[x.length-1]).toISOString().split('T')[0];
+	const title = `Daily Positive Covid Tests in BC  [${firstEntryDate}  to  ${lastEntryDate}]`;
 	const trace1 = {
 		'x' : x,
 		'y' : y,
 		'type' : 'scatter',
 		'trendline' : 'lowess'
 	};
-
-	// Additional options for lines and overall graph labels etc.
-	const title = `Daily Positive Covid Tests in BC  [${first_entry_date}  to  ${todayDate}]`;
-
 	const figure = {
 		'data': [trace1],
 		'layout' : {'title': title}
@@ -156,14 +162,15 @@ async function generateGraph(writableStream, x,y) {
 		height: 500
 	};
 
-	// use the plotly lib to generate a graph image.
+	// Use the plotly lib to generate a graph image.
 	plotly.getImage(figure, imgOpts, function (error, imageStream) {
 		// Wait until the image is written before continuing.
 		imageStream.on('end', () => {
 			imageReady = true;
 		});
 		
-		// Need to handle bad data and download problems - as improvement.
+		// Need to handle bad data and download problems - as improvement
+		// to display older image if new image cannot be produced.
 		if (error) return console.log (error);
 
 		imageStream.pipe(writableStream);
@@ -174,4 +181,3 @@ async function generateGraph(writableStream, x,y) {
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
-

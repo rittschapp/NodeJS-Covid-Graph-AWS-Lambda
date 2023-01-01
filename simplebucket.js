@@ -10,6 +10,9 @@ const {S3, GetObjectCommand, PutObjectCommand, CreateBucketCommand} = require('@
 
  The date will increment after 6:00 PM PT so the image will need to be
  regenerated at that point as the previous image will then be stale.
+
+ Improvement for this utility will be to expose the metadata and allow the
+ caller to decide if the image should be used and/or overwritten.
  */
 class SimpleBucket {
 
